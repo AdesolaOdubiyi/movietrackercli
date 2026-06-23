@@ -13,6 +13,10 @@ class MovieSchema(BaseModel):
   imdb_rating: float = Field(description="Current IMDB score out of ten")
 
   @property
-  def sluf(self) -> str:
-    "Generates a reliable, determinsitic primary key ("title-releaseyear"")"
-    # note, currently trying to figure out how to get the regex for this
+  def slug(self) -> str:
+    "Generates a reliable, determinsitic primary key (title-releaseyear)"
+    # strip everything except alphanumeric characters and spaces
+    clean_title = re.sub(r'[^a-zA-Z0-9\s]', '', self.title).lower()
+    # replace spaces with a dash
+    clean_title = re.sub(r'\s+', '-', clean_title.strip())
+    return f"{clean_title}-{self.year}"
