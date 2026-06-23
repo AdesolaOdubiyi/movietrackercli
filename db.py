@@ -1,1 +1,1 @@
-# placeholder stuff
+# this file creates our db schema
