@@ -14,7 +14,6 @@ class MovieSchema(BaseModel):
 
   @property
   def slug(self) -> str:
-    "Generates a reliable, determinsitic primary key (title-releaseyear)"
     # strip everything except alphanumeric characters and spaces
     clean_title = re.sub(r'[^a-zA-Z0-9\s]', '', self.title).lower()
     # replace spaces with a dash
