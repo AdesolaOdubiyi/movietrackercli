@@ -15,6 +15,24 @@ def get_db_connection():
 
 # function to initalize the DB (something with conn i think)
 def init_db():
+  """Creates our movie and watched tables"""
+  conn.execute("""
+    CREATE TABLE IF NOT EXISTS movies (
+    slug TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    year INTEGER,
+    genre TEXT,
+    imdb_rating REAL
+    )
+  """)
+  conn.execute("""
+      CREATE TABLE IF NOT EXISTS watched (
+          movie_slug TEXT PRIMARY KEY,
+          watched_date TEXT,
+          FOREIGN KEY(movie_slug) REFERENCES movies(slug) ON DELETE CASCADE
+          )
+      """)
+      conn.commit()
 
 # function to save movie to DB
 def save_movie_to_db(movie: MovieSchema) -> str:
@@ -30,4 +48,3 @@ def get_stats_data() -> Tuple[int, int]:
 
 # function to get top rated movies
 def get_top_rated_movies() -> List[Tuple[str, float]]:
-  
