@@ -5,22 +5,28 @@ from rich.table import Table
 import db
 from api import search_movie
 from models import MovieSchema
+from datetime import datetime
 
 app = typer.Typer(
-    help="Track watched movies, search real-time movie data with Gemini",
+    help="Track watched movies, search real-time movie data with Groq",
     no_args_is_help=True,
 )
 console = Console()
 
+def format_timestamp(iso_str: Optional[str]) -> str:
+  if not iso_str:
+    return "-"
+  parsed = datetime.strptime(iso_str, "%Y-%m-%dT%H:%M:%SZ")
+  return parsed.strftime("%Y-%m-%d %H:%M")
 
-def _query(words: List[str]) -> str:
+def query(words: List[str]) -> str:
     text = " ".join(words).strip()
     if not text:
         raise typer.BadParameter("Please provide a movie title, slug, or search query.")
     return text
 
 
-def _movie_table(title: str, rows: list[dict]) -> None:
+def movie_table(title: str, rows: list[dict]) -> None:
     table = Table(title=title)
     table.add_column("Slug", overflow="fold")
     table.add_column("Title")
@@ -38,26 +44,24 @@ def _movie_table(title: str, rows: list[dict]) -> None:
             str(row.get("genre", "")),
             f"{float(row.get('imdb_rating', 0)):.1f}",
             str(row.get("times_watched", 0) or 0),
-            str(row.get("last_watched_at") or "—"),
+            format_timestamp(row.get("last_watched_at"))
         )
     console.print(table)
 
 
-def _print_movie(movie: MovieSchema, prefix: str = "Found") -> None:
+def print_movie(movie: MovieSchema, prefix: str = "Found") -> None:
     console.print(f"[bold green]{prefix}:[/bold green] {movie.title} ({movie.year})")
     console.print(f"[bold]Slug:[/bold] {movie.slug}")
     console.print(f"[bold]Genre:[/bold] {movie.genre}")
     console.print(f"[bold]IMDb:[/bold] {movie.imdb_rating:.1f}/10")
 
 
-def _handle_error(exc: Exception) -> None:
+def handle_error(exc: Exception) -> None:
     console.print(f"[bold red]Error:[/bold red] {exc}")
     raise typer.Exit(code=1)
 
-
 @app.callback()
 def startup() -> None:
-    """Initialize the SQLite database before every command."""
     db.init_db()
 
 
@@ -68,24 +72,24 @@ def search(
 ) -> None:
    
     try:
-        movie = search_movie(_query(query_words))
-        _print_movie(movie)
+        movie = search_movie(query(query_words))
+        print_movie(movie)
         if save_result:
             slug = db.save_movie_to_db(movie)
             console.print(f"[green]Saved as[/green] {slug}")
     except (RuntimeError, ValueError) as exc:
-        _handle_error(exc)
+        handle_error(exc)
 
 
 @app.command()
 def save(query_words: List[str] = typer.Argument(..., help="Movie query to search and save.")) -> None:
     try:
-        movie = search_movie(_query(query_words))
+        movie = search_movie(query(query_words))
         slug = db.save_movie_to_db(movie)
-        _print_movie(movie, prefix="Saved")
+        print_movie(movie, prefix="Saved")
         console.print(f"[bold]Primary key:[/bold] {slug}")
     except (RuntimeError, ValueError) as exc:
-        _handle_error(exc)
+        handle_error(exc)
 
 
 @app.command("list")
@@ -97,11 +101,10 @@ def list_saved(
     if not rows:
         console.print("No movies found yet. Try: [bold]python main.py save inception 2010[/bold]")
         return
-    _movie_table("Saved Movies", rows)
+    movie_table("Saved Movies", rows)
 
 
-def _resolve_saved_slug_or_fetch(query_text: str) -> tuple[str, str]:
-    """Return (slug, title) from saved DB if possible; otherwise fetch and save."""
+def resolve_saved_slug_or_fetch(query_text: str) -> tuple[str, str]:
     exact = db.get_movie(query_text)
     if exact:
         return exact["slug"], exact["title"]
@@ -122,28 +125,25 @@ def watched(
         help="Saved slug, title, or search query. If not saved, it will be fetched and saved.",
     ),
 ) -> None:
-    """Log that you watched a movie."""
     try:
-        slug, title = _resolve_saved_slug_or_fetch(_query(movie_words))
+        slug, title = resolve_saved_slug_or_fetch(query(movie_words))
         db.mark_as_watched(slug)
         console.print(f"[green]Logged watched:[/green] {title} ({slug})")
     except (RuntimeError, ValueError) as exc:
-        _handle_error(exc)
+        handle_error(exc)
 
 
 @app.command()
 def find(query_words: List[str] = typer.Argument(..., help="Search inside your saved movies.")) -> None:
-    """Search your local saved movies without calling Gemini."""
-    rows = db.find_saved_movies(_query(query_words))
+    rows = db.find_saved_movies(query(query_words))
     if not rows:
         console.print("No saved movies matched that search.")
         return
-    _movie_table("Matching Saved Movies", rows)
+    movie_table("Matching Saved Movies", rows)
 
 
 @app.command()
 def stats() -> None:
-    """Show database stats."""
     data = db.get_stats_data()
     table = Table(title="Movie Tracker Stats")
     table.add_column("Metric")
@@ -170,7 +170,7 @@ def top(limit: int = typer.Option(10, "--limit", "-n", min=1, max=50, help="Numb
     if not rows:
         console.print("No movies saved yet.")
         return
-    _movie_table(f"Top {limit} Saved Movies", rows)
+    movie_table(f"Top {limit} Saved Movies", rows)
 
 
 if __name__ == "__main__":
