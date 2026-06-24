@@ -36,6 +36,13 @@ def init_db():
 
 # function to save movie to DB
 def save_movie_to_db(movie: MovieSchema) -> str:
+  with get_db_connection as conn:
+    conn.execute("""
+        INSERT OR REPLACE INTO movies (slug, title, year, genre, imdb_rating)
+        VALUES (?, ?, ?, ?, ?)
+      """, (movie.slug, movie.title, movie.year, movie.genre, movie.imdb_rating))
+      conn.commit()
+    return movie.slug
   
 # function to get saved movies
 def get_saved_movies() -> List[Tuple[str, int]]:
