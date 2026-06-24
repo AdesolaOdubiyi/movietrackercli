@@ -31,4 +31,4 @@ def search_movie(query: str) -> MovieSchema:
       )
       return MovieSchema.model_validate_json(interaction.output_text)
     except Exception as exc:
-      raise RuntimeError(f"Gemini failed to produce a response")
+      raise RuntimeError(f"Gemini failed to produce a response: {exc}") from exc

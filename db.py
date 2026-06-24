@@ -213,7 +213,7 @@ def get_stats_data(db_path: str = DB_NAME) -> Dict[str, Any]:
     if genre_counter:
       most_common_genre = genre_counter.most_common(1)[0][0]
     else:
-      None
+      most_common_genre = None
     return {
         "total_saved": total_saved,
         "total_watches": total_watches,
