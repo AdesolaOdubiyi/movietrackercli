@@ -5,6 +5,9 @@ from rich.table import Table
 import db
 from api import search_movie
 from models import MovieSchema
+import os
+from groq import Groq
+
 
 app = typer.Typer(
     help="Track watched movies, search real-time movie data with Gemini",
@@ -172,6 +175,37 @@ def top(limit: int = typer.Option(10, "--limit", "-n", min=1, max=50, help="Numb
         return
     _movie_table(f"Top {limit} Saved Movies", rows)
 
+@app.command()
+def start() -> None:
+  """Start an interactive session"""
+  console.print("[bold green]Movie Tracker started.[/bold green] Type a command or 'quit' to exit.\n")
+    while True:
+      try:
+        line = input(">> ").strip()
+      except (EOFError, KeyboardInterrupt):
+        break
+      if line.lower() in ("quit", "exit", "q"):
+        console.print("Bye!")
+        break
+      if not line:
+        continue
+      try:
+        app(line.split(), standalone_mode=False)
+      except Exception as e:
+        console.print(f"[red]{e}[/red]")
+
+@app.command()
+def recommend(
+  query_words: List[str] = typer.Argument(..., help="Describe what you want to watch")
+  ) -> None:
+  """Get movie recommendations based on a description."""
+  client = Groq(api_key=os.environ.get("GENAI_KEY"))
+  prompt = f"Recommend 5 movies for someone who wants: {_query(query_words)}. For each give: title, year, genre, and one sentence why. Be concise."
+  response = client.chat.completeions.create(
+    model="llama-3.3-70b-versatile",
+    messages=[{"role": "user", "content": prompt}]
+  )
+  console.print(response.choices[0].message.content)
 
 if __name__ == "__main__":
     app()
