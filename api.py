@@ -11,8 +11,12 @@ client = OpenAI(api_key=my_api_key, base_url="https://api.groq.com/openai/v1")
 
 def search_movie(query: str) -> MovieSchema:
     prompt = f"""
-    Find the best matching movie for this user query:
+    The user is searching for a specific movie by its title, which may contain
+    multiple words:
     "{query}"
+
+    Treat the entire query as the movie's title. Do not match it to a shorter or
+    different movie that only shares the first word or part of the title.
 
     Return exactly one movie. Prefer a theatrically released feature film when the
     query is ambiguous. Use accurate public data. The IMDb rating must be a
