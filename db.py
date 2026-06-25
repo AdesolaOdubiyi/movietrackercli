@@ -21,15 +21,15 @@ def get_db_connection(db_path: str = DB_NAME) -> sqlite3.Connection:
 # function to add user rating and user review columns if they dont alredy exists
 # doing this since its a change to our existing db
 def _migrate(db_path: str = DB_NAME) -> None:
-  with get_db_connection(db_path) as conn:
-    for sql in [
-      "ALTER TABLE movies ADD COLUMN user_rating INTEGER",
-      "ALTER TABLE movies ADD COLUMN user_rating TEXT",
-    ]:
-      try:
-        conn.execute(sql)
-      except Exception:
-        pass # because this means column already exists
+    with get_db_connection(db_path) as conn:
+        for sql in [
+            "ALTER TABLE movies ADD COLUMN user_rating INTEGER",
+            "ALTER TABLE movies ADD COLUMN user_rating TEXT",
+        ]:
+            try:
+                conn.execute(sql)
+            except Exception:
+                pass # because this means column already exists
 
 
 
@@ -63,7 +63,7 @@ def init_db(db_path: str = DB_NAME) -> None:
             """
         )
 # perform no operation if the columns already exists
-_migrate(db_path)
+_migrate()
 
 # function to save movie to DB
 def save_movie_to_db(movie: MovieSchema, db_path: str = DB_NAME) -> str:
@@ -110,9 +110,9 @@ def get_movie(slug: str, db_path: str = DB_NAME) -> Optional[Dict[str, Any]]:
             (slug,),
         ).fetchone()
     if movie_row:
-      return dict(movie_row)
+        return dict(movie_row)
     else:
-      return None
+        return None
 
 
 # function to search saved movies by slug, title, year, or genre
@@ -203,23 +203,23 @@ def get_top_rated_movies(limit: int = 10, db_path: str = DB_NAME) -> List[Dict[s
 
 # function for users to rate a movie, safeguard to return False if movie not watched yet
 def rate_movie(slug: str, rating: int, review: Optional[str] = None,
-   db_path: str = DB_NAME) -> bool:
-   movie = get_movie(slug, db_path)
+    db_path: str = DB_NAME) -> bool:
+    movie = get_movie(slug, db_path)
 
-   if not movie:
-    raise ValueError(f"Movie '{slug}' not found.")
+    if not movie:
+        raise ValueError(f"Movie '{slug}' not found.")
 
-  # movie was saved but never watched
-   if not movie["times_watched"]:
-      return False
-  
-  with get_db_connection(db_path) as conn:
-    conn.execute(
-      "UPDATE movies SET user_rating = ?, user_review = ?, updated_at = ? WHERE slug = ?",
-      (rating, review, utc_now(), slug),
-    )
+    # movie was saved but never watched
+    if not movie["times_watched"]:
+        return False
 
-  return True
+    with get_db_connection(db_path) as conn:
+        conn.execute(
+            "UPDATE movies SET user_rating = ?, user_review = ?, updated_at = ? WHERE slug = ?",
+            (rating, review, utc_now(), slug),
+        )
+
+    return True
 
 # function to get rating distribution across all rated movies
 def get_rating_distribution(db_path: str = DB_NAME) -> List[Dict[str, Any]]:
@@ -256,10 +256,9 @@ def get_avg_rating_by_genre(db_path: str = DB_NAME) -> List[Dict[str, Any]]:
     return avg_by_genre
 
 # function to get avereage user rating grouped by decade
-def get_avg_rating_by_decate(db_path: str = DB_NAME) ->
-    List[Dic[str, Any]]:
+def get_avg_rating_by_decade(db_path: str = DB_NAME) -> List[Dict[str, Any]]:
     with get_db_connection(db_path) as conn:
-      rows = conn.execute(
+        rows = conn.execute(
             """
             SELECT (year / 10) * 10 AS decade,
                    ROUND(AVG(user_rating), 2) AS avg_rating,
@@ -269,22 +268,22 @@ def get_avg_rating_by_decate(db_path: str = DB_NAME) ->
             GROUP BY decade
             ORDER BY decade
             """
-      ).fetchall()
-    avg_by_decade = []
-    for row in rows:
-      avg_by_decade.append(dict(row))
+        ).fetchall()
+        avg_by_decade = []
+        for row in rows:
+            avg_by_decade.append(dict(row))
     return avg_by_decade
 
 # function to get count of saved movies never watched
 def get_backlog_size(db_path: str = DB_NAME) -> int:
     with get_db_connection(db_path) as conn:
-      row = conn.execute(
-        """
-        SELECT COUNT(*) AS n FROM movies
-        WHERE slug NOT IN (SELECT DISTINCT movie_slug FROM
-            watched_log)
-        """
-      ).fetchone()
+        row = conn.execute(
+            """
+            SELECT COUNT(*) AS n FROM movies
+            WHERE slug NOT IN (SELECT DISTINCT movie_slug FROM
+                watched_log)
+            """
+        ).fetchone()
     return row["n"] if row else 0
 
 # function to get the statistics on watched movies and saved movies
@@ -315,9 +314,9 @@ def get_stats_data(db_path: str = DB_NAME) -> Dict[str, Any]:
         average_imdb_rating = round(rating_total / total_saved, 2)
 
     if genre_counter:
-      most_common_genre = genre_counter.most_common(1)[0][0]
+        most_common_genre = genre_counter.most_common(1)[0][0]
     else:
-      most_common_genre = None
+        most_common_genre = None
     return {
         "total_saved": total_saved,
         "total_watches": total_watches,
